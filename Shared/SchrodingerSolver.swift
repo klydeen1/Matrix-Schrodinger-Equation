@@ -50,7 +50,7 @@ class SchrodingerSolver: NSObject, ObservableObject {
     func calculateValidWavefunctions() async {
         allValidPsiPlotData = []
         calculatedValidEnergies = []
-        let psiPrecision = 1e-4 // How close the wavefunction must be to 0 for us to be satisfied
+        let psiPrecision = 1e-8 // How close the wavefunction must be to 0 for us to be satisfied
         // let intervalPrecision = 1e-6 // How small the energy interval can be before we quit
         let energyStep = (maxEnergy - minEnergy)/200.0
         await solveSchrodingerWithRK4(E: minEnergy) // Find the starting wavefunction
@@ -118,7 +118,6 @@ class SchrodingerSolver: NSObject, ObservableObject {
                     }
                 }
                 if similarEnergyAlreadyFound == false {
-                    print("Unique energy \(testEnergy)")
                     calculatedValidEnergies.append(testEnergy)
                     calculatedValidPsi.append(calculatedPsiArray)
                     allValidPsiPlotData.append(newDataPoints)
@@ -216,7 +215,7 @@ class SchrodingerSolver: NSObject, ObservableObject {
         
         // Add the first point (x=0) to the arrays
         calculatedPsiArray.append(0.0)
-        calculatedPsiPrimeArray.append(5e-8) // This needs to change if the method (Euler vs. RK4) is changed
+        calculatedPsiPrimeArray.append(1e-3) // This needs to change if the method (Euler vs. RK4) is changed
         calculatedPsiDoublePrimeArray.append(((VArray[0] - E) * 1/schrodingerConstant) * calculatedPsiArray[0])
         let dataPoint: plotDataType = [.X: xArray[0], .Y: calculatedPsiArray[0]]
         newDataPoints.append(dataPoint)

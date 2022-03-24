@@ -42,17 +42,21 @@ class MatrixSchrodingerSolver: NSObject, ObservableObject {
     let hBarSquaredOverM = 7.61996423107385308868
     
     func getWavefunctions() async {
+        // Reset some arrays to empty
+        allValidPsiPlotData = []
+        calculatedValidPsi = []
+        calculatedValidEnergies = []
+        
         // Calculate the basis wavefunctions only if they haven't been calculated yet
         // CHANGE: Needs to calculate them if the number of states chosen by the user has changed too
         if basisPsiArrays.isEmpty {
             await getBasisWavefunctions()
         }
-        // Same as above for the Hamiltonian. Also finds the eigenvalues
-        if hamiltonian.isEmpty {
-            await constructHamiltonian()
-            if !hamiltonian.isEmpty {
-                await calculateHamiltonianEigenvalues()
-            }
+        // Construct the Hamiltonian and find the eigenvalues and eigenvectors
+        hamiltonian = []
+        await constructHamiltonian()
+        if !hamiltonian.isEmpty {
+            await calculateHamiltonianEigenvalues()
         }
         // Get the wavefunction results as a linear combination of the basis wavefunctions
         if !eigenvectors.isEmpty {
@@ -66,9 +70,9 @@ class MatrixSchrodingerSolver: NSObject, ObservableObject {
                         }
                         else {
                             calculatedPsiArray[j] += basisPsiArrays[Int(i)][j]*eigenvector[i]
-                            if (i == eigenvector.count) { // This is our last time running this loop
+                            if (i == eigenvector.count - 1) { // This is our last time running this loop
                                 // Set the plot data
-                                let dataPoint: plotDataType = [.X: xArray[i], .Y: calculatedPsiArray[i]]
+                                let dataPoint: plotDataType = [.X: xArray[j], .Y: calculatedPsiArray[j]]
                                 newDataPoints.append(dataPoint)
                             }
                         }
@@ -109,6 +113,8 @@ class MatrixSchrodingerSolver: NSObject, ObservableObject {
         */
     }
     
+    /// constructHamiltonian
+    /// Creates the Hamiltonian matrix using all wavefunctions in the basis
     func constructHamiltonian() async {
         // H_ij = <psi_i | H | psi_j> = <psi_i | E_i | psi_j> + <psi_i | V | psi_j>
         for i in 0..<numStates { // Iteration over rows
@@ -131,14 +137,16 @@ class MatrixSchrodingerSolver: NSObject, ObservableObject {
         }
     }
     
+    /// calculateHamiltonianEigenvalues
+    /// Runs appropriate functions to calculate the eigenvalues and eigenvectors of the Hamiltonian matrix
     func calculateHamiltonianEigenvalues() async {
         calculatedValidEnergies = []
+        eigenvectors = []
         allValidPsiPlotData = []
         let fortranArray = pack2dArray(arr: hamiltonian, rows: hamiltonian.count, cols: hamiltonian[0].count)
         let result = calculateEigenvalues(arrayForDiagonalization: fortranArray)
-        print(result)
+        // print(result)
     }
-
     
     /// pack2DArray
     /// Converts a 2D array into a linear array in FORTRAN Column Major Format

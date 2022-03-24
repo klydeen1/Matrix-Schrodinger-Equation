@@ -16,7 +16,7 @@ class OneDPotentials: NSObject, ObservableObject {
     var potentialType = "Square Well"
     var xMin = 0.0
     var xMax = 10.0
-    var xStep = 0.1
+    var xStep = 0.01
     //var newXStep = 0.1
     let hBarSquaredOverM = 7.61996423107385308868
     var newXArray = [Double]()

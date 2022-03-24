@@ -18,7 +18,7 @@ class SchrodingerSolver: NSObject, ObservableObject {
     // Variables relating to the potential
     var xArray = [Double]() // Array holding x-values for the potential
     var VArray = [Double]() // Array holding the potentials V(x)
-    var xStep = 0.1
+    var xStep = 0.01
     
     // Energy range to search for eigenvalues in
     var minEnergy = 0.01
@@ -43,6 +43,18 @@ class SchrodingerSolver: NSObject, ObservableObject {
         // await updateDataPoints(dataPoints: newDataPoints)
     }
     
+    /// normalizeWavefunction
+    /// Uses the mean value theorem for integrals to normalize the wavefunction. Adds the normalized wavefunction to our plot data
+    func normalizeWavefunction() async {
+        let psiSquared = calculatedPsiArray.map({calculatedPsiArray in calculatedPsiArray * calculatedPsiArray})
+        let avgPsiSquared = Double(psiSquared.reduce(0, +)) / Double(xArray.count)
+        for i in 0..<xArray.count {
+            calculatedPsiArray[i] = calculatedPsiArray[i] / sqrt((avgPsiSquared * (xArray[xArray.count - 1] - xArray[0])))
+            let dataPoint: plotDataType = [.X: xArray[i], .Y: calculatedPsiArray[i]]
+            newDataPoints.append(dataPoint)
+        }
+    }
+    
     /// calculateValidWavefunctions
     /// Function to find energy eigenvalues within a given energy range as well as the wavefunctions for those energies
     /// Solutions are for wells so the wavefunction at the right boundary must be very close to 0 if the solution is valid
@@ -50,7 +62,7 @@ class SchrodingerSolver: NSObject, ObservableObject {
     func calculateValidWavefunctions() async {
         allValidPsiPlotData = []
         calculatedValidEnergies = []
-        let psiPrecision = 1e-8 // How close the wavefunction must be to 0 for us to be satisfied
+        let psiPrecision = 1e-4 // How close the wavefunction must be to 0 for us to be satisfied
         // let intervalPrecision = 1e-6 // How small the energy interval can be before we quit
         let energyStep = (maxEnergy - minEnergy)/200.0
         await solveSchrodingerWithRK4(E: minEnergy) // Find the starting wavefunction
@@ -118,6 +130,7 @@ class SchrodingerSolver: NSObject, ObservableObject {
                     }
                 }
                 if similarEnergyAlreadyFound == false {
+                    print("Unique energy \(testEnergy)")
                     calculatedValidEnergies.append(testEnergy)
                     calculatedValidPsi.append(calculatedPsiArray)
                     allValidPsiPlotData.append(newDataPoints)
@@ -175,10 +188,10 @@ class SchrodingerSolver: NSObject, ObservableObject {
             
             calculatedPsiArray.append(calculatedPsiArray[i-1] + ((k1 + 2.0*k2 + 2.0*k3 + k4)/6.0))
             calculatedPsiPrimeArray.append(calculatedPsiPrimeArray[i-1] + ((j1 + 2.0*j2 + 2.0*j3 + j4)/6.0))
-            
-            let dataPoint: plotDataType = [.X: xArray[i], .Y: calculatedPsiArray[i]]
-            newDataPoints.append(dataPoint)
         }
+        
+        // Normalize the wavefunction
+        await normalizeWavefunction()
     }
     
     /// solveSchrodingerWithEuler
@@ -215,7 +228,7 @@ class SchrodingerSolver: NSObject, ObservableObject {
         
         // Add the first point (x=0) to the arrays
         calculatedPsiArray.append(0.0)
-        calculatedPsiPrimeArray.append(1e-3) // This needs to change if the method (Euler vs. RK4) is changed
+        calculatedPsiPrimeArray.append(5e-4) // This needs to change if the method (Euler vs. RK4) is changed
         calculatedPsiDoublePrimeArray.append(((VArray[0] - E) * 1/schrodingerConstant) * calculatedPsiArray[0])
         let dataPoint: plotDataType = [.X: xArray[0], .Y: calculatedPsiArray[0]]
         newDataPoints.append(dataPoint)
@@ -256,8 +269,8 @@ class SchrodingerSolver: NSObject, ObservableObject {
         await plotDataModel!.changingPlotParameters.xMax = xMax + 0.5
         await plotDataModel!.changingPlotParameters.xMin = xMin - 0.5
         // Set y-axis limits
-        await plotDataModel!.changingPlotParameters.yMax = 5.0
-        await plotDataModel!.changingPlotParameters.yMin = -5.0
+        await plotDataModel!.changingPlotParameters.yMax = 1.1
+        await plotDataModel!.changingPlotParameters.yMin = -1.1
             
         // Set title and other attributes
         await plotDataModel!.changingPlotParameters.title = "Wavefunction Solution"

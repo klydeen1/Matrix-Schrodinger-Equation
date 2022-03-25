@@ -64,7 +64,7 @@ class SchrodingerSolver: NSObject, ObservableObject {
         calculatedValidEnergies = []
         let psiPrecision = 1e-4 // How close the wavefunction must be to 0 for us to be satisfied
         // let intervalPrecision = 1e-6 // How small the energy interval can be before we quit
-        let energyStep = (maxEnergy - minEnergy)/200.0
+        let energyStep = 0.5
         await solveSchrodingerWithRK4(E: minEnergy) // Find the starting wavefunction
         var leftFinalPsi = calculatedPsiArray[calculatedPsiArray.count - 1] // Psi value at right boundary for the starting wavefunction
         var leftEnergy = minEnergy // Energy of the left boundary to search for zeroes
@@ -130,7 +130,7 @@ class SchrodingerSolver: NSObject, ObservableObject {
                     }
                 }
                 if similarEnergyAlreadyFound == false {
-                    print("Unique energy \(testEnergy)")
+                    // print("Unique energy \(testEnergy)")
                     calculatedValidEnergies.append(testEnergy)
                     calculatedValidPsi.append(calculatedPsiArray)
                     allValidPsiPlotData.append(newDataPoints)

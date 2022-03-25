@@ -16,8 +16,7 @@ struct ContentView: View {
     @ObservedObject var matrixPsiCalculator = MatrixSchrodingerSolver()
     
     // User inputted variables
-    @State var minEnergyString = "0.01"
-    @State var maxEnergyString = "10.0"
+    @State var numStatesString = "10"
     @State var wellSizeString = "10.0"
     @State var xStepString = "0.01"
     
@@ -27,6 +26,7 @@ struct ContentView: View {
     @State var selectedEnergy = ""
     @State var selectedEnergyIndex = 0
     @State var energies = [""]
+    @State var sortedEnergies = [""]
     var plots = ["Potential", "Wavefunction"]
     var potentials = ["Square Well", "Linear Well", "Parabolic Well", "Square + Linear Well", "Square Barrier", "Triangle Barrier", "Coupled Parabolic Well", "Coupled Square Well + Field", "Harmonic Oscillator", "Kronig - Penney", "KP2-a"]
     
@@ -53,18 +53,10 @@ struct ContentView: View {
                 
                 HStack {
                     VStack(alignment: .center) {
-                        Text("Minimum Energy (eV)")
+                        Text("Number of States for the Basis (Max: 162)")
                             .font(.callout)
                             .bold()
-                        TextField("# Minimum Energy (eV)", text: $minEnergyString)
-                            .padding()
-                    }
-                    
-                    VStack(alignment: .center) {
-                        Text("Maximum Energy (eV)")
-                            .font(.callout)
-                            .bold()
-                        TextField("# Maximum Energy (eV)", text: $maxEnergyString)
+                        TextField("# Number of States for the Basis", text: $numStatesString)
                             .padding()
                     }
                 }
@@ -149,11 +141,16 @@ struct ContentView: View {
         // Send the well size and xStep to potentialCalculator
         potentialCalculator.xMax = Double(wellSizeString)!
         potentialCalculator.xStep = Double(xStepString)!
+        matrixPsiCalculator.xMax = Double(wellSizeString)!
+        matrixPsiCalculator.xStep = Double(xStepString)!
+        
+        // Send the number of states to matrixPsiCalculator
+        matrixPsiCalculator.numStates = Int(numStatesString)!
         
         // Get the arrays for x and the potential from potentialCalculator
         await potentialCalculator.setPotential()
         
-        // Send the x and potential arrays to psiCalculator
+        // Send the x and potential arrays to matrixPsiCalculator
         matrixPsiCalculator.xArray = potentialCalculator.xArray
         matrixPsiCalculator.VArray = potentialCalculator.VArray
         
@@ -165,6 +162,7 @@ struct ContentView: View {
         for energy in matrixPsiCalculator.validEnergyArray {
             self.energies.append(String(format: "%.3f", energy))
         }
+        self.sortedEnergies = energies.sorted()
         
         // Plot the data
         await generatePlots()

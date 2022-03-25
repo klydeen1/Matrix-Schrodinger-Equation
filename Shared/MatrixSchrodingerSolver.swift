@@ -19,7 +19,7 @@ class MatrixSchrodingerSolver: NSObject, ObservableObject {
     
     // Parameters and results for the 1D particle in a box
     var xMax = 10.0
-    let xStep = 0.01
+    var xStep = 0.01
     var basisPsiArrays: [[Double]] = [] // Solutions to the 1D particle in a box
     var basisEnergies: [Double] = [] // Eigenenergies for the 1D particle in a box
     var numStates = 10
@@ -34,6 +34,10 @@ class MatrixSchrodingerSolver: NSObject, ObservableObject {
     var calculatedPsiArray = [Double]()
     var eigenvectors: [[Double]] = []
     
+    var oldXMax = 10.0
+    var oldXStep = 0.01
+    var wellParametersChanged = false
+    
     // Data for plots
     var newDataPoints: [plotDataType] =  []
     var allValidPsiPlotData: [[plotDataType]] = []
@@ -41,30 +45,45 @@ class MatrixSchrodingerSolver: NSObject, ObservableObject {
     
     let hBarSquaredOverM = 7.61996423107385308868
     
+    /// getWavefunctions
+    /// Calculates the valid wavefunctions and energies for the Schrodinger equation using the matrix form. The basis functions are the 1d particle in a box solution
     func getWavefunctions() async {
         // Reset some arrays to empty
         allValidPsiPlotData = []
         calculatedValidPsi = []
         calculatedValidEnergies = []
         
-        // Calculate the basis wavefunctions only if they haven't been calculated yet
-        // CHANGE: Needs to calculate them if the number of states chosen by the user has changed too
-        if basisPsiArrays.isEmpty {
+        // Determine if the well size or number of steps has changed
+        if (xMax != oldXMax || xStep != oldXStep) {
+            wellParametersChanged = true
+            oldXMax = xMax
+            oldXStep = xStep
+        }
+        
+        // Calculate the basis wavefunctions only if they haven't been calculated yet or if the well parameters have changed
+        if (basisPsiArrays.isEmpty || wellParametersChanged) {
             await getBasisWavefunctions()
         }
+        
+        // The number of states is based on user input but the number is capped at basisEnergies.count
+        if numStates > basisEnergies.count {
+            numStates = basisEnergies.count
+        }
+        
         // Construct the Hamiltonian and find the eigenvalues and eigenvectors
         hamiltonian = []
         await constructHamiltonian()
         if !hamiltonian.isEmpty {
             await calculateHamiltonianEigenvalues()
         }
+        
         // Get the wavefunction results as a linear combination of the basis wavefunctions
         if !eigenvectors.isEmpty {
             for (_, eigenvector) in eigenvectors.enumerated() { // Array over all eigenvalues/energies
                 calculatedPsiArray = []
                 newDataPoints = []
                 for i in 0..<eigenvector.count { // Array over each eigenvector component
-                    for j in 0..<xArray.count { // Array over each value of x
+                    for j in 0..<basisPsiArrays[Int(i)].count { // Array over each value of x
                         if (i == 0) {
                             calculatedPsiArray.append(basisPsiArrays[Int(i)][j]*eigenvector[i])
                         }
@@ -96,39 +115,47 @@ class MatrixSchrodingerSolver: NSObject, ObservableObject {
         potentialCalculator.xStep = xStep
         await potentialCalculator.setPotential()
         
-        // Get the solutions for the square well between 0.01 and 10.0 eV
+        // Get the solutions for the square well between set energy values
         rk4PsiCalculator.xArray = potentialCalculator.xArray
         rk4PsiCalculator.VArray = potentialCalculator.VArray
         rk4PsiCalculator.xStep = xStep
         rk4PsiCalculator.minEnergy = 0.005
-        rk4PsiCalculator.maxEnergy = 10.0
+        rk4PsiCalculator.maxEnergy = 10000.0
         await rk4PsiCalculator.getWavefunction()
         basisPsiArrays = rk4PsiCalculator.validPsiArrays
         basisEnergies = rk4PsiCalculator.validEnergyArray
-        numStates = basisEnergies.count
-        /*
-        for (_, energy) in basisEnergies.enumerated() {
-            print(energy)
-        }
-        */
     }
     
     /// constructHamiltonian
     /// Creates the Hamiltonian matrix using all wavefunctions in the basis
     func constructHamiltonian() async {
+        // The elements of the Hamiltonian are given by:
         // H_ij = <psi_i | H | psi_j> = <psi_i | E_i | psi_j> + <psi_i | V | psi_j>
+        print("Number of states: \(numStates)")
         for i in 0..<numStates { // Iteration over rows
             var newRow: [Double] = []
             for j in 0..<numStates { // Iteration over columns
                 var newValue = 0.0
-                var potentialProduct = 0.0 // inner product <psi_i | V | psi_j>
-                for index in 0..<VArray.count {
+                var potentialProduct = 0.0 // Variable for the inner product <psi_i | V | psi_j>
+                
+                // Handle array length mismatches
+                var arrLength = 1
+                if (basisPsiArrays[i].count < VArray.count) {
+                    arrLength = basisPsiArrays[i].count
+                }
+                else {
+                    arrLength = VArray.count
+                }
+                
+                for index in 0..<arrLength {
                     potentialProduct += VArray[index] * basisPsiArrays[i][index] * basisPsiArrays[j][index]
                 }
                 if (i == j) {
+                    // <psi_i | E_i | psi_j> evaluates to E_i
                     newValue = basisEnergies[i] + potentialProduct
                 }
                 else {
+                    // <psi_i | E_i | psi_j> evaluates to 0
                     newValue = potentialProduct
                 }
                 newRow.append(newValue)
@@ -144,7 +171,7 @@ class MatrixSchrodingerSolver: NSObject, ObservableObject {
         eigenvectors = []
         allValidPsiPlotData = []
         let fortranArray = pack2dArray(arr: hamiltonian, rows: hamiltonian.count, cols: hamiltonian[0].count)
-        let result = calculateEigenvalues(arrayForDiagonalization: fortranArray)
+        _ = calculateEigenvalues(arrayForDiagonalization: fortranArray)
         // print(result)
     }
     

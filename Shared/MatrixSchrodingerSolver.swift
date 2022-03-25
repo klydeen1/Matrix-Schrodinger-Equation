@@ -147,9 +147,16 @@ class MatrixSchrodingerSolver: NSObject, ObservableObject {
                     arrLength = VArray.count
                 }
                 
-                for index in 0..<arrLength {
-                    potentialProduct += VArray[index] * basisPsiArrays[i][index] * basisPsiArrays[j][index]
+                for x in 0..<arrLength {
+                    let potential = VArray[x]
+                    let psii = basisPsiArrays[i][x]
+                    let psij = basisPsiArrays[j][x]
+                    potentialProduct += potential*psii*psij
+                    //potentialProduct += VArray[x] * basisPsiArrays[i][x] * basisPsiArrays[j][x]
                 }
+                potentialProduct /= (Double(arrLength))
+                potentialProduct *= (xMax)
+                
                 if (i == j) {
                     // <psi_i | E_i | psi_j> evaluates to E_i
                     newValue = basisEnergies[i] + potentialProduct
@@ -162,6 +169,7 @@ class MatrixSchrodingerSolver: NSObject, ObservableObject {
             }
             hamiltonian.append(newRow)
         }
+        print(hamiltonian)
     }
     
     /// calculateHamiltonianEigenvalues
